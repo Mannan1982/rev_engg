@@ -94,6 +94,7 @@ export const projectStoredMember = (
     entry: fileEntry({
       path,
       kind: symlink ? "symlink" : "file",
+      executable: entry.typeCode === BINARY_TYPE_CODE,
       declaredSize,
       compressedSize: entry.compressedSize,
       byteOffset: sourceByteOffset(entry, archiveStart),
@@ -305,6 +306,9 @@ const pyzMemberPath = (container: string, item: PyzEntry): string => {
   return `${container}/${dotted}.pyc`;
 };
 
+/** The POSIX bootloader extracts only `b` (ARCHIVE_ITEM_BINARY) members with S_IXUSR. */
+const BINARY_TYPE_CODE = "b";
+
 const isBytecodeType = (typeCode: string): boolean =>
   typeCode === "s" || typeCode === "m" || typeCode === "M";
 
@@ -317,13 +321,14 @@ const fileEntry = (input: {
   readonly adapterKey: string;
   readonly formatMetadata: PyInstallerEntryMetadata;
   readonly encrypted?: boolean;
+  readonly executable?: boolean;
   readonly kind?: "file" | "symlink" | "metadata";
 }): ArtifactEntry => ({
   path: input.path,
   kind: input.kind ?? "file",
   declaredSize: input.declaredSize,
   compressedSize: input.compressedSize,
-  executable: false,
+  executable: input.executable === true,
   encrypted: input.encrypted === true,
   byteOffset: input.byteOffset,
   declaredIntegrity: null,
