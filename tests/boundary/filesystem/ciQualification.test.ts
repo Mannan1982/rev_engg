@@ -254,7 +254,7 @@ async function requiredRun(
       result:
         name === overrides.failed
           ? "failure"
-          : changes.tier === "reused"
+          : changes.tier === "reused" && name !== "dependency-security"
             ? "skipped"
             : "success",
     };
@@ -373,3 +373,19 @@ it.each([
     expect(await readFile(outcome.output, "utf8")).not.toContain("receipt_");
   },
 );
+
+it("requires fresh security evidence even when exact-source provider qualification is reused", async () => {
+  const { CI_FLAGS } = await import(
+    new URL("../../../scripts/ci/scopes.mjs", import.meta.url).href
+  );
+  const changes = {
+    ...Object.fromEntries(CI_FLAGS.map((flag: string) => [flag, "false"])),
+    tier: "reused",
+    qualification_run_id: "7",
+  };
+  const outcome = await requiredRun(changes, { failed: "dependency-security" });
+  await expect(outcome.result).rejects.toMatchObject({
+    code: 1,
+    stderr: expect.stringContaining("dependency-security"),
+  });
+});

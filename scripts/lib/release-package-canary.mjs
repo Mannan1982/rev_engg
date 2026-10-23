@@ -14,27 +14,6 @@ import {
 
 const execute = promisify(execFile);
 
-/** Install the selected archive or registry specifier before any protocol deadline. */
-export async function installCanaryPackage(specifier, workspace, environment) {
-  const prefix = join(workspace, "installed");
-  await execute(
-    "npm",
-    [
-      "install",
-      "--ignore-scripts",
-      "--no-save",
-      "--no-package-lock",
-      "--no-audit",
-      "--no-fund",
-      "--prefix",
-      prefix,
-      specifier,
-    ],
-    { cwd: workspace, env: environment, maxBuffer: 16 * 1024 * 1024 },
-  );
-  return join(prefix, "node_modules", "rea-agents");
-}
-
 /** Exercise the same installed CLI/MCP contract before and after publication. */
 export async function verifyInstalledCanaryPackage(
   packageRoot,

@@ -204,6 +204,10 @@ if (tier === "reused") {
       .split("\0")
       .filter(Boolean);
     for (const file of files) {
+      selected.dependency_security ||= matchesAny(
+        file,
+        SCOPES.dependency_security,
+      );
       if (matchesAny(file, SCOPES.reverse_tools)) selected.reverse_tools = true;
       if (
         /^(README(?:_[^/]+)?\.md|AGENTS\.md|CONTRIBUTING\.md|CHANGELOG\.md|SECURITY\.md|native\/windows\/README\.md|\.github\/pull_request_template\.md)$/.test(
@@ -245,6 +249,7 @@ if (tier === "reused") {
         selected.code = true;
         selected.runtime = true;
         const owners = Object.entries(SCOPES)
+          .filter(([owner]) => owner !== "dependency_security")
           .filter(([, patterns]) =>
             patterns.some((pattern) => matchesGlob(file, pattern)),
           )

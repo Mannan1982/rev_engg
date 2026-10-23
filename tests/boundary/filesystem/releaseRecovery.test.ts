@@ -238,6 +238,10 @@ it("limits recovery to verification and dependent MCP publication from the relea
   expect(digest).toBeGreaterThanOrEqual(0);
   expect(rehearsal).toBeGreaterThan(digest);
   expect(canary).toBeGreaterThan(rehearsal);
+  for (const index of [rehearsal, canary])
+    expect(steps[index]?.run).toContain(
+      "--dependency-security=.cache/dependency-security",
+    );
   const publisher = workflow.jobs["publish-mcp"];
   expect(publisher.needs).toBe("verify");
   expect(

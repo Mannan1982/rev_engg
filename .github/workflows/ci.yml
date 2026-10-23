@@ -57,6 +57,7 @@ jobs:
       contents: read
       actions: read
     outputs:
+      dependency_security: ${{ steps.plan.outputs.dependency_security }}
       tier: ${{ steps.plan.outputs.tier }}
       qualification_run_id: ${{ steps.qualification.outputs.run_id }}
       code: ${{ steps.plan.outputs.code }}
@@ -1091,6 +1092,45 @@ jobs:
     if: needs.changes.outputs.website == 'true'
     uses: ./.github/workflows/website-check.yml
 
+  dependency-security:
+    name: Dependency security
+    needs: changes
+    if: needs.changes.outputs.dependency_security == 'true' || needs.changes.outputs.tier == 'reused'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      NODE_OPTIONS: --max-old-space-size=1024
+      UV_THREADPOOL_SIZE: "1"
+      TURBO_TOKEN: ""
+      TURBO_CACHE: local:rw
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Validate registry identities before installing dependencies
+        run: node scripts/ci/dependency-security.mjs --mode=preflight
+      - run: npm ci --ignore-scripts --no-audit --no-fund --maxsockets=2
+      - name: Check source lock advisories, installed signatures and identities
+        run: node scripts/ci/dependency-security.mjs --mode=source
+      - name: Check a fresh published consumer daily
+        if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
+        run: node scripts/ci/dependency-security.mjs --mode=published
+      - name: Retain dependency security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dependency-security
+          path: .cache/dependency-security/
+          if-no-files-found: warn
+          retention-days: 14
+
   required:
     name: CI required
     # Report failed dependencies, but release superseded PR concurrency slots.
@@ -1098,6 +1138,7 @@ jobs:
     needs:
       [
         changes,
+        dependency-security,
         static,
         static-deep,
         build,

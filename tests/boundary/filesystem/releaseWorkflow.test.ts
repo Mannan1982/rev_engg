@@ -696,6 +696,9 @@ it("rehearses the qualified archive before npm authority and retains registry ve
     VERIFIED_PACKAGE_TARBALL: "${{ steps.package.outputs.tarball }}",
     VERIFIED_PACKAGE_VERSION: "${{ steps.package.outputs.version }}",
   });
+  expect(exercise?.run).toContain(
+    "--dependency-security=.cache/dependency-security",
+  );
   expect(exercise?.if).toBeUndefined();
   expect(exercise?.["continue-on-error"]).toBeUndefined();
   const publish = workflow.jobs.publish;
@@ -785,6 +788,9 @@ it("rehearses the qualified archive before npm authority and retains registry ve
   );
   expect(bytes).toBeGreaterThanOrEqual(0);
   expect(canary).toBeGreaterThan(bytes);
+  expect(commands[canary]).toContain(
+    "--dependency-security=.cache/dependency-security",
+  );
   for (const index of [bytes, canary]) {
     expect(verification.steps[index]?.if).toBeUndefined();
     expect(verification.steps[index]?.["continue-on-error"]).toBeUndefined();

@@ -1,28 +1,34 @@
+import { installCanaryPackage } from "./lib/release-package-install.mjs";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
-import { promisify } from "node:util";
+import { delimiter, join, resolve } from "node:path";
+import { parseArgs, promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 
 import { lt, prerelease, rcompare, valid } from "semver";
 import { readNpmRelease, stableUpdateVersion } from "./ci/npm-release.mjs";
 
-import {
-  installCanaryPackage,
-  verifyInstalledCanaryPackage,
-} from "./lib/release-package-canary.mjs";
+import { verifyInstalledCanaryPackage } from "./lib/release-package-canary.mjs";
 import { completeVerifierRun, createVerifierRun } from "./lib/verifier-run.mjs";
 
 const verifierRun = createVerifierRun();
 const execFileAsync = promisify(execFile);
-const version = process.argv[2];
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    "dependency-security": { type: "string" },
+  },
+});
+const [version] = positionals;
 if (
   typeof version !== "string" ||
   valid(version) !== version ||
-  process.argv.length !== 3
+  positionals.length !== 1
 )
-  throw new Error("Usage: node scripts/verify-published-package.mjs <version>");
+  throw new Error(
+    "Usage: node scripts/verify-published-package.mjs <version> [--dependency-security=directory]",
+  );
 
 const canaryRoot = await mkdtemp(join(tmpdir(), "rea-published-canary-"));
 const serverEnvironment = {
@@ -38,6 +44,23 @@ try {
     canaryRoot,
     serverEnvironment,
   );
+  if (values["dependency-security"] !== undefined) {
+    const { checkDependencySecurity } =
+      await import("./lib/dependency-security.mjs");
+    const report = await checkDependencySecurity({
+      directory: join(canaryRoot, "installed"),
+      evidenceDirectory: values["dependency-security"],
+      referenceLockfile: resolve("package-lock.json"),
+      mode: "consumer",
+      sourceSha: process.env.GITHUB_SHA ?? null,
+      expectedVersion: version,
+      environment: serverEnvironment,
+    });
+    if (!report.checks_passed)
+      throw new Error(
+        `Published consumer dependency checks failed: ${report.evidence_directory}`,
+      );
+  }
   surface = await verifyInstalledCanaryPackage(
     publishedRoot,
     version,

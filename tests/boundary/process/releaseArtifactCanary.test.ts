@@ -40,6 +40,14 @@ it.skipIf(process.platform === "win32")(
     } finally {
       await harness.close();
     }
+    // The replay calls only binary_session. Preserve its real result contract
+    // and every tool name/input contract, without compiling unused result
+    // schemas again in each replay client. Real-package canaries keep all schemas.
+    snapshot.tools.tools = snapshot.tools.tools.map((tool) => {
+      if (tool.name === "binary_session") return tool;
+      const { outputSchema: _unused, ...replayed } = tool;
+      return replayed;
+    });
     await mkdir(join(candidate, "scripts"), { recursive: true });
     await writeFile(
       join(candidate, "package.json"),
@@ -84,6 +92,8 @@ if (process.argv[2] === "mcp") {
     for (const file of [
       "scripts/verify-release-artifact.mjs",
       "scripts/lib/release-package-canary.mjs",
+      "scripts/lib/release-package-install.mjs",
+      "scripts/lib/npm-command.mjs",
       "scripts/lib/mcp-verifier-results.mjs",
       "scripts/lib/verifier-run.mjs",
     ]) {

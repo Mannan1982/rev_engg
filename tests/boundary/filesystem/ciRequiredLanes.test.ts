@@ -155,6 +155,7 @@ it("holds native and provider fan-out behind static validation while portable fe
   const { jobs } = await workflow();
   const earlyJobs = new Set([
     "changes",
+    "dependency-security",
     "static",
     "static-deep",
     "build",
@@ -514,6 +515,7 @@ it.each([
   async (selected, result, passes) => {
     const workflow = await requiredNeeds();
     for (const [scope, lane] of [
+      ["dependency_security", "dependency-security"],
       ["sqlite", "sqlite-runtime"],
       ["workflows", "static"],
       ["ghidra_bridge", "ghidra_bridge"],

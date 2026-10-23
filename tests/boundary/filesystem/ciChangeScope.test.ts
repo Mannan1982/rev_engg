@@ -1607,3 +1607,37 @@ it.each([
     });
   },
 );
+
+it.each([
+  "package-lock.json",
+  ".nvmrc",
+  "scripts/lib/dependency-security.mjs",
+  "scripts/lib/npm-command.mjs",
+  "scripts/ci/dependency-security.mjs",
+  "scripts/verify-release-artifact.mjs",
+  "tests/boundary/filesystem/dependencySecurity.test.ts",
+])(
+  "selects live dependency security without losing existing owners for %s",
+  async (path) => {
+    const { directory, base } = await fixture();
+    const head = await change(directory, [path]);
+    const plan = await classify(directory, base, head);
+    expect(plan.dependency_security).toBe(true);
+    if (
+      [
+        "package-lock.json",
+        ".nvmrc",
+        "scripts/lib/npm-command.mjs",
+        "scripts/verify-release-artifact.mjs",
+      ].includes(path)
+    )
+      expect(plan.package).toBe(true);
+  },
+);
+it("keeps unrelated provider and documentation changes outside the selective security lane", async () => {
+  const { directory, base } = await fixture();
+  const head = await change(directory, ["src/provider.ts", "README.md"]);
+  expect((await classify(directory, base, head)).dependency_security).toBe(
+    false,
+  );
+});

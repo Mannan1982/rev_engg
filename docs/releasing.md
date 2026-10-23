@@ -28,6 +28,34 @@ job rebuilds or repacks the archive.
 This rehearsal checks package consumption on the Linux release runner;
 qualification retains its broader native-host and real-provider checks.
 
+Dependency policy: the source lock pins the build, while an npm consumer resolves
+the published package's semver ranges. Consumer installations are not pinned by
+the source lock. Qualification checks live advisories for the source lock,
+signatures for npm-supported installed dependencies, and installed identities.
+Hourly qualification reuse still requires fresh dependency evidence; cached
+provider qualification is not a current registry security result. The daily
+scheduled run also checks a fresh installation of the current npm release.
+
+Both the qualified-archive rehearsal and published-package verification run the
+same checks on their actual installed consumer tree before executing REA.
+Installations disable lifecycle scripts and retain the generated consumer lock.
+Evidence artifacts contain command output, npm-resolved package identities and
+relationships, a content fingerprint, and version/integrity differences against
+the source lock. New semver-compatible versions are recorded; changed integrity
+for a source-locked identity fails. Unsupported registries, malformed output,
+unavailable registry evidence and exceeded output budgets fail the check.
+Optional omissions remain explicit. npm does not expose a verified-signature
+count here, so it remains unknown; these checks do not establish that every
+platform package or transitive lifecycle download is safe, or detect all malware.
+
+To reproduce the read-only checks locally, use
+`node scripts/ci/dependency-security.mjs --mode=source` after installing the
+locked dependencies, or `--mode=published` for a fresh current-release consumer.
+`--evidence=PATH` selects the retained evidence directory. The CI job limits
+registry concurrency to two connections and runs scans sequentially; each
+command has a three-minute deadline and a 16 MiB output budget. No prior pass is
+used in place of a live advisory or signature check.
+
 Before publishing, npm lookup failures and malformed metadata stop the job.
 An existing version must match the qualified tarball's SHA-512 and intended
 `latest`/`next` dist-tag before it can be reused. Publication never overwrites

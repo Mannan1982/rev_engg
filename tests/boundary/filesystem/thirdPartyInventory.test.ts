@@ -16,6 +16,8 @@ test("generates locked inventory and rejects stale notice metadata or preserved 
   for (const file of [
     "scripts/generate-third-party-inventory.mjs",
     "scripts/lib/generated-file.mjs",
+    "scripts/lib/npm-locked-packages.mjs",
+    "scripts/lib/transport-authentication.mjs",
   ])
     await copyFile(resolve(file), resolve(root, file));
   const script = resolve(root, "scripts/generate-third-party-inventory.mjs");
@@ -30,6 +32,7 @@ test("generates locked inventory and rejects stale notice metadata or preserved 
   await writeFile(
     resolve(root, "package-lock.json"),
     JSON.stringify({
+      lockfileVersion: 3,
       packages: {
         "": { name: "fixture", version: "1.0.0" },
         "node_modules/fixture-runtime": runtime,

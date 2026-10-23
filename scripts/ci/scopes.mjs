@@ -2,6 +2,25 @@
 // Shared build inputs are classified once in plan.mjs rather than repeated in
 // every workflow.
 export const SCOPES = {
+  // Cross-cutting live registry evidence; does not replace provider ownership.
+  dependency_security: [
+    "package.json",
+    "package-lock.json",
+    ".nvmrc",
+    ".npmrc",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/release-recovery.yml",
+    "scripts/ci/dependency-security.mjs",
+    "scripts/lib/dependency-security*.mjs",
+    "scripts/lib/npm-locked-packages.mjs",
+    "scripts/lib/npm-command.mjs",
+    "scripts/lib/transport-authentication.mjs",
+    "scripts/lib/release-package-install.mjs",
+    "scripts/verify-release-artifact.mjs",
+    "scripts/verify-published-package.mjs",
+    "tests/boundary/filesystem/dependencySecurity*.test.ts",
+  ],
   reverse_tools: [
     ".github/workflows/mutation.yml",
     "src/application/reverse/**",
@@ -115,6 +134,8 @@ export const SCOPES = {
     "scripts/ci/npm-release-state.*",
     "scripts/verify-release-artifact.mjs",
     "scripts/lib/release-package-canary.mjs",
+    "scripts/lib/release-package-install.mjs",
+    "scripts/lib/npm-command.mjs",
     "scripts/verify-published-package.mjs",
     "tests/boundary/filesystem/releaseRecovery.test.ts",
     "tests/boundary/filesystem/mcpRegistryPublication.test.ts",

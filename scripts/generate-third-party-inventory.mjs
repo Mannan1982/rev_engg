@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { lockedPackages } from "./lib/npm-locked-packages.mjs";
 import { ensureGeneratedFile } from "./lib/generated-file.mjs";
 
 const arguments_ = new Set(process.argv.slice(2));
@@ -13,25 +14,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const lock = JSON.parse(
   await readFile(join(root, "package-lock.json"), "utf8"),
 );
-const entries = Object.entries(lock.packages)
-  .filter(([path]) => path !== "")
-  .map(([path, record]) => ({
-    path,
-    name: record.name ?? path.slice(path.lastIndexOf("node_modules/") + 13),
-    version: record.version,
-    license: record.license ?? "UNDECLARED",
-    resolved: record.resolved,
-    integrity: record.integrity,
-    dev: record.dev === true,
-    optional: record.optional === true,
-  }))
-  .sort((left, right) =>
-    left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
-  );
-for (const entry of entries)
-  for (const field of ["name", "version", "resolved", "integrity"])
-    if (typeof entry[field] !== "string" || entry[field].length === 0)
-      throw new Error(`Missing locked ${field}: ${entry.path}`);
+const entries = lockedPackages(lock);
 const runtime = entries.filter(({ dev }) => !dev);
 const runtimeFingerprint = createHash("sha256")
   .update(JSON.stringify(runtime))
