@@ -558,8 +558,10 @@ const parseSignedData = (
 };
 
 /** Decode ContentInfo wrapping SignedData; other content types remain unsupported. */
-export const parsePkcs7SignedData = (bytes: Buffer): ParsedSignedData => {
-  const root = readAsn1(bytes);
+export const parsePkcs7SignedData = (
+  bytes: Buffer,
+  root: Asn1Node = readAsn1(bytes),
+): ParsedSignedData => {
   if (root.end !== bytes.length) return fail("ContentInfo has trailing data.");
   const children = sequence(root, "ContentInfo");
   const type = children[0];

@@ -9,6 +9,7 @@ import {
   oidName,
   parsePkcs7SignedData,
   PeCertificateAsn1Failure,
+  readAsn1,
 } from "./PeCertificateAsn1.js";
 import { readPeHeaders } from "./PeResourceLayout.js";
 
@@ -107,11 +108,26 @@ export const parsePeCertificates = (
       fail("WIN_CERTIFICATE dwLength is shorter than its header.");
     if (at + length > table.length)
       fail("WIN_CERTIFICATE dwLength exceeds the certificate table.");
-    const payload = table.subarray(at + 8, at + length);
+    const entryPayload = table.subarray(at + 8, at + length);
+    let payload = entryPayload;
     let pkcs7: PeCertificates["entries"][number]["pkcs7"] = null;
     if (peCertificateTypeName(certificateType) === "pkcs7") {
       try {
-        const parsed = parsePkcs7SignedData(payload);
+        // dwLength may include the zero bytes that align the complete
+        // WIN_CERTIFICATE to eight bytes. Bound CMS to its encoded ASN.1 root;
+        // tolerate only the corresponding alignment bytes, never arbitrary
+        // trailing data.
+        const root = readAsn1(entryPayload);
+        const paddingBytes = entryPayload.length - root.end;
+        const alignedLength = align8(8 + root.end);
+        if (
+          paddingBytes !== 0 &&
+          (8 + entryPayload.length !== alignedLength ||
+            !entryPayload.subarray(root.end).every((byte) => byte === 0))
+        )
+          fail("WIN_CERTIFICATE has invalid PKCS#7 alignment padding.");
+        payload = entryPayload.subarray(0, root.end);
+        const parsed = parsePkcs7SignedData(payload, root);
         pkcs7 = {
           content_type_oid: parsed.content_type_oid,
           content_type_name: oidName(parsed.content_type_oid),
@@ -158,6 +174,7 @@ export const parsePeCertificates = (
           })),
         };
       } catch (cause) {
+        if (cause instanceof ArtifactReaderFailure) throw cause;
         if (cause instanceof PeCertificateAsn1Failure)
           fail(`PKCS#7 signedData is malformed: ${cause.message}`);
         throw cause;
